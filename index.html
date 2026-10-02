@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FDE Cycle Trainer</title>
+<meta name="description" content="Duolingo-style lessons for the Cambridge IGCSE Computer Science fetch-decode-execute cycle: registers, buses, a tappable CPU diagram and exam traps.">
+<meta property="og:title" content="FDE Cycle Trainer">
+<meta property="og:description" content="Duolingo-style lessons for the Cambridge IGCSE Computer Science fetch-decode-execute cycle: registers, buses, a tappable CPU diagram and exam traps.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#17A468">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: one narrow column. Home is a zig-zag lesson path; a lesson is top bar + exercise + fixed answer footer */
+:root{
+  --bg:#F6F8F7; --surface:#FFFFFF; --ink:#1D2927; --muted:#687673; --line:#DFE6E3; --line-edge:#C9D3CF;
+  --primary:#17A468; --primary-edge:#0E7A4C; --good-bg:#DAF5E6; --good-ink:#0E6E45;
+  --bad:#E04A4F; --bad-edge:#AE2B30; --bad-bg:#FCE3E3; --bad-ink:#A3262B;
+  --gold:#E9A300;
+  --reg:#2D78DB; --reg-bg:#E2EDFC; --cu:#8549D6; --cu-bg:#EEE4FC; --alu:#DD6A22; --alu-bg:#FCE8D9;
+  --mem:#56677A; --mem-bg:#E7ECF1; --bus:#0B9B9B; --bus-bg:#DDF4F3;
+  --f-display:'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+  --f-body:'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111917; --surface:#1A2421; --ink:#E6EEEB; --muted:#93A39F; --line:#2B3834; --line-edge:#22302C;
+  --primary:#25B877; --primary-edge:#167C50; --good-bg:#14301F; --good-ink:#6FDBA6;
+  --bad:#EE5E62; --bad-edge:#A8363A; --bad-bg:#3A1C1E; --bad-ink:#FF9B9E;
+  --gold:#F2B630;
+  --reg:#6AA5F2; --reg-bg:#1A2B44; --cu:#B48BF2; --cu-bg:#2C2142; --alu:#F28E4B; --alu-bg:#3B2617;
+  --mem:#9FB0C2; --mem-bg:#25303B; --bus:#3CC9C7; --bus-bg:#123433;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#111917; --surface:#1A2421; --ink:#E6EEEB; --muted:#93A39F; --line:#2B3834; --line-edge:#22302C;
+  --primary:#25B877; --primary-edge:#167C50; --good-bg:#14301F; --good-ink:#6FDBA6;
+  --bad:#EE5E62; --bad-edge:#A8363A; --bad-bg:#3A1C1E; --bad-ink:#FF9B9E;
+  --gold:#F2B630;
+  --reg:#6AA5F2; --reg-bg:#1A2B44; --cu:#B48BF2; --cu-bg:#2C2142; --alu:#F28E4B; --alu-bg:#3B2617;
+  --mem:#9FB0C2; --mem-bg:#25303B; --bus:#3CC9C7; --bus-bg:#123433;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;font-weight:600}
+button{font-family:inherit;font-weight:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--reg);outline-offset:2px}
+.wrap{max-width:600px;margin:0 auto;padding-inline:16px;padding-block:16px 140px}
+svg{display:block}
+
+/* Home */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:-.01em}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:5px;font-family:var(--f-display);font-weight:600;font-size:15px;padding:4px 10px;border:2px solid var(--line);border-radius:99px;background:var(--surface)}
+.chip svg{width:18px;height:18px}
+.chip.xp svg{fill:var(--gold)}
+.chip.snd{cursor:pointer;color:var(--muted)}
+.sub{margin:0 0 18px;color:var(--muted);font-size:14px}
+.unit{border-radius:16px;padding:14px 16px;color:#fff;margin:22px 0 14px;box-shadow:0 4px 0 var(--ue)}
+.unit h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:20px}
+.unit p{margin:2px 0 0;opacity:.92;font-size:14px}
+.u0{background:var(--reg);--ue:color-mix(in srgb,var(--reg) 70%,#000)}
+.u1{background:var(--primary);--ue:var(--primary-edge)}
+.u2{background:var(--cu);--ue:color-mix(in srgb,var(--cu) 70%,#000)}
+.u3{background:var(--bus);--ue:color-mix(in srgb,var(--bus) 70%,#000)}
+.u4{background:var(--alu);--ue:color-mix(in srgb,var(--alu) 70%,#000)}
+.path{display:flex;flex-direction:column;align-items:center;gap:18px;padding:6px 0}
+.node{display:flex;flex-direction:column;align-items:center;gap:6px;transform:translateX(calc(var(--off,0) * 1px))}
+.nb{position:relative;width:72px;height:66px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;background:var(--line);box-shadow:0 6px 0 var(--line-edge);color:var(--muted)}
+.nb svg{width:30px;height:30px}
+.node.done .nb{background:var(--gold);box-shadow:0 6px 0 color-mix(in srgb,var(--gold) 70%,#000);color:#fff}
+.node.next .nb{background:var(--primary);box-shadow:0 6px 0 var(--primary-edge);color:#fff}
+.node.next .nb::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:4px solid var(--line)}
+.node.locked .nb{cursor:not-allowed}
+.nb:active{transform:translateY(5px);box-shadow:none!important}
+.node.locked .nb:active{transform:none}
+.nl{font-size:13px;color:var(--muted);text-align:center;max-width:150px}
+.node.next .nl{color:var(--ink)}
+.bubble{font-family:var(--f-display);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:3px 10px;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.practice{margin-top:28px;border:2px solid var(--line);border-bottom-width:4px;border-radius:16px;background:var(--surface);padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.practice h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:18px}
+.practice p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.foot-links{margin-top:22px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px}
+.linkbtn.warn{color:var(--bad)}
+
+/* Buttons */
+.btn{border:0;border-radius:14px;padding:13px 22px;font-family:var(--f-display);font-weight:600;font-size:17px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;background:var(--primary);color:#fff;box-shadow:0 4px 0 var(--primary-edge);min-width:150px}
+.btn:active{transform:translateY(4px);box-shadow:none}
+.btn:disabled{background:var(--line);color:var(--muted);box-shadow:0 4px 0 var(--line-edge);cursor:default;transform:none}
+.btn.red{background:var(--bad);box-shadow:0 4px 0 var(--bad-edge)}
+.btn.ghost{background:var(--surface);color:var(--reg);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+
+/* Lesson */
+.lbar{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.xbtn{background:none;border:0;cursor:pointer;color:var(--muted);padding:4px}
+.xbtn svg{width:26px;height:26px;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.prog{flex:1;height:16px;border-radius:99px;background:var(--line);overflow:hidden}
+.prog span{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .35s ease;box-shadow:inset 0 4px 0 rgba(255,255,255,.25)}
+.hearts{display:flex;align-items:center;gap:4px;font-family:var(--f-display);font-weight:600;color:var(--bad);font-size:18px}
+.hearts svg{width:24px;height:24px;fill:var(--bad)}
+.combo{font-family:var(--f-display);font-weight:600;color:var(--gold);font-size:14px;text-transform:uppercase;letter-spacing:.06em;margin:-10px 0 8px;min-height:1.3em}
+.tag{display:inline-block;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--cu);margin-bottom:6px}
+.q{font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1.25;margin:0 0 18px;text-wrap:balance}
+.teach-text{font-size:17px;margin:0 0 14px;max-width:60ch}
+.teach-list{margin:0 0 14px;padding-left:1.4em;display:flex;flex-direction:column;gap:4px}
+.mnemo{border:2px dashed var(--gold);border-radius:12px;padding:10px 12px;font-size:15px;margin:0 0 14px}
+.mnemo b{color:var(--gold)}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt,.tile{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:2px solid var(--line);border-bottom-width:4px;border-radius:14px;padding:12px 14px;cursor:pointer;font-size:16px}
+.opt:active,.tile:active{transform:translateY(2px);border-bottom-width:2px}
+.opt .kn{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:13px;color:var(--muted)}
+.opt.sel,.tile.sel{border-color:var(--reg);background:var(--reg-bg)}
+.opt.sel .kn{border-color:var(--reg);color:var(--reg)}
+.opt.right,.tile.right{border-color:var(--primary);background:var(--good-bg)}
+.opt.wrong,.tile.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+.ans-area{min-height:64px;border-top:2px solid var(--line);border-bottom:2px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.ans-area.short,.bank.short{flex-direction:row;flex-wrap:wrap}
+.ans-area .ph{margin:auto 0;color:var(--muted);font-size:14px;text-align:center;width:100%}
+.bank{display:flex;flex-direction:column;gap:8px}
+.tile .tn{flex:none;font-family:var(--f-display);color:var(--primary);font-size:15px;width:1.2em}
+.tile.ghost{background:var(--line);color:transparent;border-color:var(--line);cursor:default}
+.tile.ghost *{visibility:hidden}
+
+.sent{font-size:19px;line-height:2.4;margin:0 0 20px}
+.slot{display:inline-block;min-width:68px;padding:2px 10px;margin:0 3px;border:0;border-bottom:3px solid var(--line-edge);background:none;font:inherit;font-family:var(--f-display);font-weight:600;color:var(--reg);cursor:pointer;line-height:1.5;vertical-align:baseline}
+.slot.filled{background:var(--surface);border:2px solid var(--line);border-bottom-width:4px;border-radius:10px}
+.slot.right{border-color:var(--primary);background:var(--good-bg);color:var(--good-ink)}
+.slot.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad-ink)}
+.bank.chips{flex-direction:row;flex-wrap:wrap;gap:8px}
+.chipbtn{background:var(--surface);border:2px solid var(--line);border-bottom-width:4px;border-radius:12px;padding:8px 14px;font-family:var(--f-display);font-weight:600;font-size:17px;cursor:pointer}
+.chipbtn.ghost{background:var(--line);color:transparent;cursor:default}
+
+.typein{width:100%;font:inherit;font-size:18px;padding:14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink)}
+.typein:focus{border-color:var(--reg);outline:none}
+.hint{color:var(--muted);font-size:14px;margin:8px 0 0}
+
+.match{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:10px}
+.match .col{display:flex;flex-direction:column;gap:10px}
+.match .tile{justify-content:center;text-align:center;min-height:58px;font-size:15px}
+.match .left .tile{font-family:var(--f-display);font-size:17px}
+.tile.matched{opacity:.35;cursor:default;border-color:var(--primary)}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+/* CPU diagram */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;font-family:var(--f-display);font-weight:600;font-size:15px}
+.flow .fx{padding:2px 8px;border-radius:8px;background:var(--cb);color:var(--c)}
+.flow .ar{color:var(--muted)}
+.dia{display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:8px;margin-bottom:6px}
+.cpu{border:2px dashed var(--line-edge);border-radius:16px;padding:22px 8px 8px;position:relative}
+.cap{position:absolute;top:4px;left:12px;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.cg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.c{--c:var(--muted);--cb:var(--surface);background:var(--surface);border:2px solid var(--line);border-bottom-width:4px;border-radius:12px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center;min-width:0}
+.c b{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--c)}
+.c small{font-size:10.5px;line-height:1.15;color:var(--muted);font-weight:700}
+button.c{cursor:pointer}
+.k-reg{--c:var(--reg);--cb:var(--reg-bg)} .k-cu{--c:var(--cu);--cb:var(--cu-bg)} .k-alu{--c:var(--alu);--cb:var(--alu-bg)} .k-mem{--c:var(--mem);--cb:var(--mem-bg)} .k-bus{--c:var(--bus);--cb:var(--bus-bg)}
+.c.hi{border-color:var(--c);background:var(--cb)}
+.c.dim{opacity:.4}
+.c.to{animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+.c.sel{border-color:var(--reg);background:var(--reg-bg)}
+.c.right{border-color:var(--primary);background:var(--good-bg)}
+.c.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.ram{display:flex}
+.ram .c{flex:1}
+.buses{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.buses .c{flex-direction:row;gap:6px;padding:6px}
+.buses .c b{font-size:13px}
+.buses .c small{font-size:11px}
+
+/* Footer */
+.foot{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:2px solid var(--line);padding:16px 16px calc(16px + env(safe-area-inset-bottom, 0px))}
+.foot.good{background:var(--good-bg);border-color:transparent}
+.foot.bad{background:var(--bad-bg);border-color:transparent}
+.fi{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fmsg{min-width:0;flex:1 1 260px}
+.fmsg h3{margin:0;font-family:var(--f-display);font-weight:700;font-size:21px}
+.foot.good h3{color:var(--good-ink)} .foot.bad h3{color:var(--bad-ink)}
+.fmsg p{margin:2px 0 0;font-size:14.5px}
+.foot.good .fmsg p{color:var(--good-ink)} .foot.bad .fmsg p{color:var(--bad-ink)}
+.fmsg .ans{font-weight:800}
+.fhint{color:var(--muted);font-size:14px}
+
+/* Result / fail */
+.center{text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:30px}
+.center h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:32px;color:var(--gold);text-wrap:balance}
+.center.fail h1{color:var(--bad)}
+.center p{margin:0;max-width:44ch;color:var(--muted)}
+.stats{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+.stat{border:2px solid var(--gold);border-radius:14px;overflow:hidden;min-width:120px}
+.stat .sh{background:var(--gold);color:#fff;font-family:var(--f-display);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px}
+.stat .sv{font-family:var(--f-display);font-weight:700;font-size:24px;padding:8px;color:var(--gold);font-variant-numeric:tabular-nums}
+.stat.g{border-color:var(--primary)} .stat.g .sh{background:var(--primary)} .stat.g .sv{color:var(--primary)}
+.overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);display:grid;place-items:end center;padding:16px;z-index:5}
+.sheet{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:20px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center}
+.sheet h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:20px}
+.sheet p{margin:0;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:380px){.c small{display:none}.dia{grid-template-columns:minmax(0,1fr) 64px}}
+.disclaimer{margin-top:14px;font-size:12px;color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+<style>body{margin:0} :root{padding-top:env(safe-area-inset-top,0px)}</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const ICON = {
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2.5" fill="currentColor" stroke="none"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+};
+const COMP = {
+  PC:{l:'PC', f:'Program Counter', k:'reg'}, MAR:{l:'MAR', f:'Memory Address Register', k:'reg'},
+  MDR:{l:'MDR', f:'Memory Data Register', k:'reg'}, CIR:{l:'CIR', f:'Current Instruction Register', k:'reg'},
+  ACC:{l:'ACC', f:'Accumulator', k:'reg'}, CU:{l:'CU', f:'Control Unit', k:'cu'}, ALU:{l:'ALU', f:'Arithmetic Logic Unit', k:'alu'},
+  RAM:{l:'RAM', f:'Memory', k:'mem'}, ABUS:{l:'Address', f:'bus', k:'bus'}, DBUS:{l:'Data', f:'bus', k:'bus'}, CBUS:{l:'Control', f:'bus', k:'bus'}
+};
+const NAME = id => ({ABUS:'address bus', DBUS:'data bus', CBUS:'control bus', RAM:'memory (RAM)'}[id] || COMP[id].l);
+
+const FETCH4 = ['The address in the PC is copied to the MAR','The PC is incremented by 1','The instruction at that address is fetched from memory into the MDR','The instruction in the MDR is copied to the CIR'];
+const FULL7 = ['The PC holds the address of the next instruction','The address in the PC is copied to the MAR','The PC is incremented by 1','The instruction is fetched from memory into the MDR','The instruction in the MDR is copied to the CIR','The CU decodes the instruction in the CIR','The instruction is executed'];
+
+const LESSONS = {
+  L1:{name:'The registers', ex:[
+    {type:'teach', title:'Registers', text:'Inside the CPU are registers: tiny, very fast stores. For Paper 1 you need five of them.', hi:['PC','MAR','MDR','CIR','ACC']},
+    {type:'teach', title:'PC and MAR', text:'PC (Program Counter) holds the address of the next instruction to be fetched. MAR (Memory Address Register) holds the address of the memory location being read from or written to.', hi:['PC','MAR']},
+    {type:'teach', title:'MDR, CIR and ACC', text:'MDR (Memory Data Register) holds the data or instruction fetched from memory. CIR (Current Instruction Register) holds the instruction being decoded and executed. ACC (Accumulator) holds the results of calculations.', hi:['MDR','CIR','ACC']},
+    {type:'mc', q:'What does the PC hold?', options:['The address of the next instruction','The instruction being decoded','The result of a calculation','Data fetched from memory'], a:0, why:'PC = Program Counter. It always points to the next instruction.'},
+    {type:'type', q:'What does MAR stand for?', a:['memory address register'], why:'MAR holds an address, never the data itself.'},
+    {type:'match', q:'Match each register to its job', pairs:[['PC','Address of the next instruction'],['MAR','Address being read from or written to'],['MDR','Data or instruction fetched from memory'],['CIR','Instruction being decoded'],['ACC','Result of a calculation']]},
+    {type:'tap', q:'Tap the register that holds the instruction currently being decoded.', a:'CIR', why:'CIR = Current Instruction Register.'},
+    {type:'mc', q:'Which register holds the data that has just been fetched from memory?', options:['MDR','MAR','PC','CIR'], a:0, why:'Memory DATA Register. The MAR only holds the address.'},
+    {type:'type', q:'What does CIR stand for?', a:['current instruction register'], why:'It holds the instruction the CPU is working on right now.'},
+    {type:'tap', q:'Tap the register that stores the results of calculations.', a:'ACC', why:'The accumulator holds results from the ALU.'}
+  ]},
+  L2:{name:'CU, ALU and memory', ex:[
+    {type:'teach', title:'Control unit (CU)', text:'The CU decodes the instruction in the CIR and sends control signals to the other components so the instruction is carried out. It is kept in time by the clock.', hi:['CU','CIR']},
+    {type:'teach', title:'Arithmetic logic unit (ALU)', text:'The ALU carries out calculations (add, subtract) and logic operations (AND, OR, comparisons). Its results go into the ACC.', hi:['ALU','ACC']},
+    {type:'teach', title:'Memory (RAM)', text:'Memory is outside the CPU. Programs and data are stored there, each at its own address. The CPU fetches instructions from it one at a time.', hi:['RAM']},
+    {type:'mc', q:'Which component decodes the instruction?', options:['The control unit (CU)','The ALU','The MAR','The accumulator'], a:0, why:'In the exam, write "the control unit". "The CPU" alone scores 0.'},
+    {type:'tap', q:'Tap the component that performs arithmetic and logic operations.', a:'ALU', why:'Arithmetic Logic Unit.'},
+    {type:'mc', q:'Where are a program\'s instructions stored before they are fetched?', options:['Memory (RAM)','The CIR','The control unit','The ALU'], a:0, why:'Instructions wait in memory until they are fetched.'},
+    {type:'blank', q:'The ___ carries out calculations and the result is stored in the ___.', a:['ALU','ACC'], bank:['ALU','ACC','CU','MDR'], why:'ALU does the maths, ACC holds the answer.'},
+    {type:'type', q:'What does ALU stand for?', a:['arithmetic logic unit','arithmetic and logic unit','arithmetic logical unit','arithmetic and logical unit'], why:'It does the arithmetic and the logic.'},
+    {type:'match', q:'Match each part to its job', pairs:[['CU','Decodes and sends control signals'],['ALU','Does arithmetic and logic'],['RAM','Stores instructions and data'],['ACC','Holds results from the ALU']]}
+  ]},
+  L3:{name:'Fetch, step by step', ex:[
+    {type:'teach', title:'Fetch 1', text:'The PC holds the address of the next instruction.', hi:['PC'], flow:['PC']},
+    {type:'teach', title:'Fetch 2', text:'The address in the PC is copied to the MAR.', flow:['PC','MAR']},
+    {type:'teach', title:'Fetch 3', text:'The PC is incremented by 1, so it now points to the next instruction.', flow:['PC'], extra:'PC + 1'},
+    {type:'teach', title:'Fetch 4', text:'The address in the MAR goes along the address bus to memory. The instruction at that address is sent back along the data bus into the MDR.', flow:['MAR','ABUS','RAM','DBUS','MDR']},
+    {type:'teach', title:'Fetch 5', text:'The instruction in the MDR is copied to the CIR.', flow:['MDR','CIR'], mnemo:true},
+    {type:'blank', q:'The address in the ___ is copied to the ___.', a:['PC','MAR'], bank:['PC','MAR','MDR','CIR','ACC'], why:'First move of every fetch: PC to MAR.'},
+    {type:'mc', q:'What happens to the PC straight after its address is copied to the MAR?', options:['It is incremented by 1','It is reset to 0','It is copied to the MDR','It is decoded'], a:0, why:'Incrementing makes the PC point at the next instruction.'},
+    {type:'order', q:'Put the fetch stage in order', items:FETCH4, why:'Remember PC, MAR, MDR, CIR. Cambridge accepts the increment any time after the PC is copied to the MAR, but this order is safest.'},
+    {type:'tap', q:'When the instruction arrives from memory, which register does it go into first?', a:'MDR', why:'Memory to MDR, then MDR to CIR.'},
+    {type:'blank', q:'The instruction in the ___ is copied to the ___.', a:['MDR','CIR'], bank:['MDR','CIR','MAR','PC','CU'], why:'Last step of fetch.'}
+  ]},
+  L4:{name:'Fetch drills', ex:[
+    {type:'teach', title:'Quick recap', text:'Fetch moves through PC, MAR, MDR, CIR, with the PC incremented on the way.', flow:['PC','MAR','MDR','CIR'], mnemo:true},
+    {type:'tap', q:'Tap the register that the PC\'s address is copied into.', a:'MAR', why:'PC to MAR.'},
+    {type:'order', q:'Put the whole fetch stage in order', items:['The PC holds the address of the next instruction'].concat(FETCH4), why:'PC, MAR, increment, MDR, CIR.'},
+    {type:'mc', q:'Why is the PC incremented?', options:['So it points to the next instruction','To count how many instructions have run','To clear it for the next calculation','To store the result of the instruction'], a:0, why:'The PC always holds the address of the next instruction.'},
+    {type:'blank', q:'The PC is ___ so it holds the address of the ___ instruction.', a:['incremented','next'], bank:['incremented','decoded','next','current','copied'], why:'Incremented by 1, pointing at the next one.'},
+    {type:'tap', q:'After the MDR, where does the instruction go?', a:'CIR', why:'MDR to CIR. Then it is decoded.'},
+    {type:'order', q:'Order the registers used in fetch', items:['PC','MAR','MDR','CIR'], short:true, why:'Pick Me My Coffee: PC, MAR, MDR, CIR.'},
+    {type:'mc', q:'A student writes: "The instruction is sent to the CPU." Why does this lose the mark?', options:['It doesn\'t name the register (MDR or CIR)','It uses the word "instruction"','The instruction goes to the ALU instead','Instructions are never sent anywhere'], a:0, why:'Examiners want the exact register. Name the MDR and the CIR.'}
+  ]},
+  L5:{name:'Decode and execute', ex:[
+    {type:'teach', title:'Decode', text:'The instruction in the CIR is decoded by the control unit. Always write "control unit", never just "the CPU".', flow:['CIR','CU']},
+    {type:'teach', title:'Execute', text:'The CU sends control signals so the instruction is carried out. If it needs a calculation, the ALU does it and the result is stored in the ACC. Then the cycle repeats with the next instruction.', flow:['CU','ALU','ACC']},
+    {type:'mc', q:'Which component decodes the instruction?', options:['The control unit','The CPU','The MDR','The ALU'], a:0, why:'One of the most commonly lost marks. Write "control unit", not "the CPU".'},
+    {type:'tap', q:'Tap the component that decodes the instruction.', a:'CU', why:'Control Unit.'},
+    {type:'blank', q:'The instruction in the ___ is decoded by the ___.', a:['CIR','CU'], bank:['CIR','CU','MDR','ALU','CPU'], why:'CIR is decoded by the CU.'},
+    {type:'mc', q:'During execute, where is the result of a calculation stored?', options:['The accumulator (ACC)','The MAR','The PC','The CIR'], a:0, why:'ALU calculates, ACC stores.'},
+    {type:'order', q:'Put decode and execute in order', items:['The CU decodes the instruction in the CIR','The CU sends control signals','The ALU carries out the calculation','The result is stored in the ACC'], why:'Decode, signals, calculate, store.'},
+    {type:'mc', q:'What happens after the instruction is executed?', options:['The cycle repeats with the next instruction','The CPU switches off','Memory is cleared','The PC is reset to 0'], a:0, why:'The PC already holds the next address, so fetch starts again.'}
+  ]},
+  L6:{name:'The three buses', ex:[
+    {type:'teach', title:'Address bus', text:'Carries addresses from the CPU (the MAR) to memory. It is one-way (unidirectional).', hi:['ABUS','MAR','RAM']},
+    {type:'teach', title:'Data bus', text:'Carries data and instructions between memory and the CPU (the MDR). It is two-way (bidirectional).', hi:['DBUS','MDR','RAM']},
+    {type:'teach', title:'Control bus', text:'Carries control signals from the CU, such as read, write and clock signals. It is two-way.', hi:['CBUS','CU']},
+    {type:'match', q:'Match each bus to what it carries', pairs:[['Address bus','Addresses, one-way'],['Data bus','Data and instructions, two-way'],['Control bus','Read, write and clock signals']]},
+    {type:'mc', q:'Which bus is unidirectional?', options:['Address bus','Data bus','Control bus','All of them'], a:0, why:'Addresses only ever go from the CPU to memory.'},
+    {type:'tap', q:'Tap the bus that carries the instruction from memory to the MDR.', a:'DBUS', why:'Instructions and data travel on the data bus.'},
+    {type:'mc', q:'During fetch, what is sent on the control bus?', options:['A read signal','The instruction','The address','The result'], a:0, why:'The CU tells memory to read the location in the MAR.'},
+    {type:'blank', q:'The address bus is ___ but the data bus is ___.', a:['one-way','two-way'], bank:['one-way','two-way','faster','slower'], why:'Unidirectional vs bidirectional.'}
+  ]},
+  L7:{name:'The full cycle', ex:[
+    {type:'teach', title:'A full-mark answer', text:'If a question says "Describe the fetch-decode-execute cycle", these are the marking points:', list:FULL7},
+    {type:'order', q:'Put the full cycle in order', items:FULL7, why:'Fetch is the first five steps, then decode, then execute.'},
+    {type:'blank', q:'The address in the ___ is copied to the ___. The ___ is incremented. The instruction is fetched into the ___, then copied to the ___. The ___ decodes it.', a:['PC','MAR','PC','MDR','CIR','CU'], bank:['PC','MAR','PC','MDR','CIR','CU','ALU','ACC'], why:'PC, MAR, PC + 1, MDR, CIR, CU.'},
+    {type:'type', q:'Which register holds the address of the next instruction? (abbreviation is fine)', a:['pc','program counter'], why:'Program Counter.'},
+    {type:'tap', q:'Tap where the address goes on its way to memory.', a:'ABUS', why:'MAR to memory along the address bus.'},
+    {type:'order', q:'Order the parts an instruction passes through', items:['RAM','MDR','CIR','CU'], short:true, why:'From memory to MDR, to CIR, decoded by the CU.'},
+    {type:'mc', q:'Which part of the cycle does the CU carry out?', options:['Decode','Increment the PC','Store results','Hold the next address'], a:0, why:'CU decodes and then sends the signals to execute.'}
+  ]},
+  L8:{name:'Exam traps', ex:[
+    {type:'mc', q:'"Which component decodes the instruction?" Which answer gets the mark?', options:['The control unit','The CPU','The processor','The computer'], a:0, why:'Name the component inside the CPU.'},
+    {type:'mc', q:'What does the MAR hold?', options:['The address of the memory location being read from or written to','The data being read from memory','The next instruction','The result of the last calculation'], a:0, why:'Common mix-up. MAR = address, MDR = data.'},
+    {type:'mc', q:'Best answer for "State the purpose of the accumulator"?', options:['It stores the results of calculations carried out by the ALU','It accumulates data','It stores instructions','It counts the instructions'], a:0, why:'Say what it stores and where the result came from.'},
+    {type:'type', q:'What does MDR stand for?', a:['memory data register'], why:'Holds data or instructions coming from or going to memory.'},
+    {type:'mc', q:'A student writes "The PC holds the next instruction." What\'s wrong?', options:['The PC holds the ADDRESS of the next instruction','Nothing, it\'s correct','The PC holds the current instruction','The PC holds the result'], a:0, why:'The word "address" is the mark.'},
+    {type:'tap', q:'Tap the register a fetched instruction is copied into before it is decoded.', a:'CIR', why:'MDR to CIR, then the CU decodes it.'},
+    {type:'order', q:'One more time: the fetch stage', items:FETCH4, why:'PC, MAR, increment, MDR, CIR.'},
+    {type:'blank', q:'The ___ bus is one-way and carries addresses from the ___ to memory.', a:['address','MAR'], bank:['address','data','MAR','MDR','control'], why:'Address bus, from the MAR.'}
+  ]}
+};
+const UNITS = [
+  {title:'Meet the CPU', sub:'Registers, control unit, ALU and memory', lessons:['L1','L2']},
+  {title:'Fetch', sub:'PC → MAR → MDR → CIR', lessons:['L3','L4']},
+  {title:'Decode and execute', sub:'The CU decodes, the ALU and ACC execute', lessons:['L5']},
+  {title:'Buses', sub:'Address, data and control', lessons:['L6']},
+  {title:'Exam mode', sub:'The full cycle and mark-scheme traps', lessons:['L7','L8']}
+];
+const ORDER = UNITS.flatMap(u => u.lessons);
+const OFFS = [0, 46, 66, 46, 0, -46, -66, -46];
+
+/* ---------- storage ---------- */
+const KEY = 'fde-trainer-v1';
+let P = {done:{}, xp:0, sound:true};
+try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && r.done) P = Object.assign(P, r); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
+
+/* ---------- helpers ---------- */
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
+  }
+  kids.flat().forEach(c => { if (c == null || c === false) return; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const norm = s => String(s).toLowerCase().replace(/[^a-z]/g, ' ').replace(/\s+/g, ' ').trim();
+const app = document.getElementById('app');
+
+let ac = null;
+function sfx(ok){
+  if (!P.sound) return;
+  try {
+    if (!ac) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return; ac = new C(); }
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime, notes = ok ? [[784, 0], [1047, 0.09]] : [[220, 0], [196, 0.12]];
+    notes.forEach(([f, d]) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = ok ? 'sine' : 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.25, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.18);
+      o.connect(g); g.connect(ac.destination); o.start(t + d); o.stop(t + d + 0.2);
+    });
+  } catch (e) {}
+}
+
+/* ---------- CPU diagram ---------- */
+function diagram(o){
+  o = o || {};
+  const flow = o.flow || [], hi = new Set([...(o.hi || []), ...flow]);
+  const last = flow[flow.length - 1];
+  const make = id => {
+    const c = COMP[id];
+    let cls = 'c k-' + c.k;
+    if (o.tap) {
+      if (o.right === id) cls += ' right';
+      else if (o.wrong === id) cls += ' wrong';
+      else if (o.sel === id) cls += ' sel';
+    } else if (hi.size) {
+      cls += hi.has(id) ? ' hi' : ' dim';
+      if (id === last && flow.length > 1) cls += ' to';
+    }
+    const kids = [h('b', null, c.l), h('small', null, c.f)];
+    return o.tap
+      ? h('button', {class:cls, type:'button', 'aria-label':NAME(id), onclick:() => o.onTap(id)}, kids)
+      : h('div', {class:cls}, kids);
+  };
+  const parts = [];
+  if (flow.length > 1 || o.extra) {
+    const f = h('div', {class:'flow'});
+    flow.forEach((id, i) => {
+      if (i) f.appendChild(h('span', {class:'ar'}, '→'));
+      f.appendChild(h('span', {class:'fx k-' + COMP[id].k}, NAME(id)));
+    });
+    if (o.extra) { f.appendChild(h('span', {class:'ar'}, '→')); f.appendChild(h('span', {class:'fx k-reg'}, o.extra)); }
+    parts.push(f);
+  }
+  parts.push(h('div', {class:'dia'},
+    h('div', {class:'cpu'}, h('span', {class:'cap'}, 'CPU'),
+      h('div', {class:'cg'}, ['CU','ALU','ACC','PC','MAR','MDR','CIR'].map(make))),
+    h('div', {class:'ram'}, make('RAM')),
+    h('div', {class:'buses'}, ['ABUS','DBUS','CBUS'].map(make))
+  ));
+  return parts;
+}
+
+/* ---------- lesson state ---------- */
+let L = null;
+function startLesson(id){
+  let ex;
+  if (id === 'PRACTICE') {
+    const pool = ORDER.filter(k => P.done[k]).flatMap(k => LESSONS[k].ex.filter(e => e.type !== 'teach'));
+    ex = shuffle(JSON.parse(JSON.stringify(pool))).slice(0, 10);
+  } else ex = JSON.parse(JSON.stringify(LESSONS[id].ex));
+  L = {id, name:id === 'PRACTICE' ? 'Mixed practice' : LESSONS[id].name, queue:ex, done:0, hearts:5, mistakes:0, slips:0, correct:0, combo:0, answer:null, m:null, checked:false, result:null, quit:false};
+  renderLesson();
+  window.scrollTo(0, 0);
+}
+const cur = () => L.queue[0];
+function answered(ex){
+  const a = L.answer;
+  switch (ex.type) {
+    case 'mc': case 'tap': return a != null;
+    case 'type': return !!(a && a.trim());
+    case 'order': return !!a && a.length === ex.items.length;
+    case 'blank': return !!a && a.every(x => x != null);
+    default: return false;
+  }
+}
+function isCorrect(ex){
+  const a = L.answer;
+  switch (ex.type) {
+    case 'mc': return a === ex.options[ex.a];
+    case 'tap': return a === ex.a;
+    case 'type': return ex.a.some(x => norm(x) === norm(a));
+    case 'order': return a.every((bi, p) => ex._bank[bi].i === p);
+    case 'blank': return a.every((bi, k) => ex._bank[bi] === ex.a[k]);
+  }
+  return false;
+}
+function correctText(ex){
+  switch (ex.type) {
+    case 'mc': return ex.options[ex.a];
+    case 'tap': return NAME(ex.a);
+    case 'type': return ex.a[0];
+    case 'order': return ex.items.map((t, i) => (i + 1) + '. ' + t).join('  ');
+    case 'blank': { let k = 0; return ex.q.replace(/___/g, () => ex.a[k++]); }
+  }
+  return '';
+}
+function check(){
+  const ex = cur();
+  if (L.checked || !answered(ex)) return;
+  const ok = isCorrect(ex);
+  L.checked = true; L.result = ok;
+  if (ok) { L.correct++; L.combo++; } else { L.hearts--; L.mistakes++; L.combo = 0; }
+  sfx(ok);
+  renderLesson();
+}
+function cont(){
+  const ex = L.queue.shift();
+  if (ex.type === 'teach' || L.result) L.done++;
+  else { delete ex._bank; delete ex._opts; delete ex._r; L.queue.push(ex); }
+  L.answer = null; L.m = null; L.checked = false; L.result = null;
+  if (L.hearts <= 0) return renderFail();
+  if (!L.queue.length) return finish();
+  renderLesson();
+  window.scrollTo(0, 0);
+}
+function finish(){
+  const perfect = L.mistakes === 0 && L.slips === 0;
+  const gain = L.id === 'PRACTICE' ? 10 : 10 + (perfect ? 5 : 0);
+  P.xp += gain;
+  if (L.id !== 'PRACTICE') P.done[L.id] = true;
+  save();
+  const answeredCount = L.correct + L.mistakes;
+  const acc = answeredCount ? Math.round(L.correct / answeredCount * 100) : 100;
+  const allDone = ORDER.every(k => P.done[k]);
+  const title = perfect ? 'Perfect lesson!' : 'Lesson complete!';
+  const msg = L.id === 'L8' || (allDone && L.id === 'PRACTICE')
+    ? 'You know the FDE cycle. In the exam: PC, MAR, increment, MDR, CIR, the control unit decodes, then execute.'
+    : perfect ? 'No mistakes. That one is locked in.' : 'Mistakes came back until you got them right. That is how it sticks.';
+  app.replaceChildren(h('div', {class:'wrap'},
+    h('div', {class:'center'},
+      h('div', {html:ICON.star, style:'width:88px;height:88px;color:var(--gold)'}),
+      h('h1', null, title),
+      h('p', null, msg),
+      h('div', {class:'stats'},
+        h('div', {class:'stat'}, h('div', {class:'sh'}, 'XP earned'), h('div', {class:'sv'}, '+' + gain)),
+        h('div', {class:'stat g'}, h('div', {class:'sh'}, 'Accuracy'), h('div', {class:'sv'}, acc + '%'))),
+      h('button', {class:'btn', type:'button', onclick:renderHome}, 'Continue'))
+  ));
+  sfx(true);
+}
+function renderFail(){
+  app.replaceChildren(h('div', {class:'wrap'},
+    h('div', {class:'center fail'},
+      h('div', {html:ICON.heart, style:'width:80px;height:80px;fill:var(--bad)'}),
+      h('h1', null, 'Out of hearts'),
+      h('p', null, 'No problem. Go through it again: the teaching cards come first, and you will see the same questions.'),
+      h('button', {class:'btn', type:'button', onclick:() => startLesson(L.id)}, 'Try again'),
+      h('button', {class:'btn ghost', type:'button', onclick:renderHome}, 'Back to path'))
+  ));
+}
+
+/* ---------- exercise renderers ---------- */
+function exTeach(ex){
+  const out = [h('span', {class:'tag'}, 'New'), h('h2', {class:'q'}, ex.title), h('p', {class:'teach-text'}, ex.text)];
+  if (ex.list) out.push(h('ol', {class:'teach-list'}, ex.list.map(t => h('li', null, t))));
+  if (ex.mnemo) out.push(h('p', {class:'mnemo', html:'<b>Memory trick:</b> <b>P</b>ick <b>M</b>e <b>M</b>y <b>C</b>offee = PC, MAR, MDR, CIR'}));
+  if (!ex.list) out.push(...diagram({hi:ex.hi, flow:ex.flow, extra:ex.extra}));
+  return out;
+}
+function exMC(ex){
+  if (!ex._opts) ex._opts = shuffle(ex.options.slice());
+  const right = ex.options[ex.a];
+  return [h('h2', {class:'q'}, ex.q), h('div', {class:'opts'}, ex._opts.map((o, i) => {
+    let cls = 'opt';
+    if (L.checked) { if (o === right) cls += ' right'; else if (o === L.answer) cls += ' wrong'; }
+    else if (L.answer === o) cls += ' sel';
+    return h('button', {class:cls, type:'button', onclick:() => { if (L.checked) return; L.answer = o; renderLesson(); }},
+      h('span', {class:'kn'}, String(i + 1)), h('span', null, o));
+  }))];
+}
+function exTap(ex){
+  return [h('h2', {class:'q'}, ex.q), ...diagram({tap:true, sel:L.answer,
+    right:L.checked ? ex.a : null, wrong:L.checked && L.answer !== ex.a ? L.answer : null,
+    onTap:id => { if (L.checked) return; L.answer = id; renderLesson(); }})];
+}
+function exOrder(ex){
+  if (!ex._bank) {
+    let b; do { b = shuffle(ex.items.map((t, i) => ({t, i}))); } while (b.every((x, p) => x.i === p) && ex.items.length > 1);
+    ex._bank = b;
+  }
+  const ans = L.answer || [];
+  const sc = ex.short ? ' short' : '';
+  const area = h('div', {class:'ans-area' + sc});
+  ans.forEach((bi, pos) => {
+    let cls = ex.short ? 'chipbtn' : 'tile';
+    if (L.checked) cls += ex._bank[bi].i === pos ? ' right' : ' wrong';
+    area.appendChild(h('button', {class:cls, type:'button', onclick:() => { if (L.checked) return; L.answer = ans.filter((_, p) => p !== pos); renderLesson(); }},
+      ex.short ? null : h('span', {class:'tn'}, String(pos + 1)), ex._bank[bi].t));
+  });
+  if (!ans.length) area.appendChild(h('p', {class:'ph'}, 'Tap the items below in order'));
+  const bank = h('div', {class:'bank' + (ex.short ? ' chips' : '')}, ex._bank.map((it, bi) => {
+    const used = ans.includes(bi);
+    return h('button', {class:(ex.short ? 'chipbtn' : 'tile') + (used ? ' ghost' : ''), type:'button', disabled:used || L.checked,
+      onclick:() => { L.answer = [...ans, bi]; renderLesson(); }}, it.t);
+  }));
+  return [h('h2', {class:'q'}, ex.q), area, bank];
+}
+function exBlank(ex){
+  if (!ex._bank) ex._bank = shuffle(ex.bank.slice());
+  const n = ex.a.length;
+  const ans = L.answer || Array(n).fill(null);
+  const parts = ex.q.split('___');
+  const sent = h('p', {class:'sent'});
+  parts.forEach((p, k) => {
+    sent.appendChild(document.createTextNode(p));
+    if (k < n) {
+      const bi = ans[k];
+      let cls = 'slot' + (bi == null ? '' : ' filled');
+      if (L.checked) cls += ex._bank[bi] === ex.a[k] ? ' right' : ' wrong';
+      sent.appendChild(h('button', {class:cls, type:'button', disabled:bi == null || L.checked, 'aria-label':'Blank ' + (k + 1),
+        onclick:() => { const a2 = ans.slice(); a2[k] = null; L.answer = a2; renderLesson(); }}, bi == null ? ' ' : ex._bank[bi]));
+    }
+  });
+  const bank = h('div', {class:'bank chips'}, ex._bank.map((w, bi) => {
+    const used = ans.includes(bi);
+    return h('button', {class:'chipbtn' + (used ? ' ghost' : ''), type:'button', disabled:used || L.checked,
+      onclick:() => { const a2 = ans.slice(); const k = a2.indexOf(null); if (k < 0) return; a2[k] = bi; L.answer = a2; renderLesson(); }}, w);
+  }));
+  return [h('h2', {class:'q'}, 'Fill in the blanks'), sent, bank];
+}
+function exType(ex){
+  const inp = h('input', {class:'typein', id:'typein', type:'text', autocomplete:'off', autocapitalize:'off', spellcheck:'false', placeholder:'Type your answer', value:L.answer || ''});
+  if (L.checked) inp.disabled = true;
+  inp.addEventListener('input', () => { L.answer = inp.value; renderFooter(); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); L.checked ? cont() : check(); } });
+  setTimeout(() => { if (!L.checked) inp.focus(); }, 30);
+  return [h('h2', {class:'q'}, ex.q), inp, h('p', {class:'hint'}, 'Capitals don\'t matter.')];
+}
+function exMatch(ex){
+  if (!ex._r) ex._r = shuffle(ex.pairs.map((_, i) => i));
+  const m = L.m || (L.m = {l:null, r:null, done:[], bad:null});
+  const pick = (side, i) => {
+    if (L.checked || m.done.includes(i)) return;
+    m[side] = m[side] === i ? null : i; m.bad = null;
+    if (m.l != null && m.r != null) {
+      if (m.l === m.r) { m.done.push(m.l); sfx(true); }
+      else { m.bad = [m.l, m.r]; L.slips++; sfx(false); }
+      m.l = null; m.r = null;
+      if (m.done.length === ex.pairs.length) { L.checked = true; L.result = true; L.correct++; L.combo++; }
+    }
+    renderLesson();
+  };
+  const tile = (side, i, text) => {
+    let cls = 'tile';
+    if (m.done.includes(i)) cls += ' matched';
+    else if (m[side] === i) cls += ' sel';
+    if (m.bad && m.bad[side === 'l' ? 0 : 1] === i) cls += ' wrong shake';
+    return h('button', {class:cls, type:'button', disabled:m.done.includes(i), onclick:() => pick(side, i)}, text);
+  };
+  return [h('h2', {class:'q'}, ex.q), h('div', {class:'match'},
+    h('div', {class:'col left'}, ex.pairs.map((p, i) => tile('l', i, p[0]))),
+    h('div', {class:'col'}, ex._r.map(i => tile('r', i, ex.pairs[i][1]))))];
+}
+
+/* ---------- lesson screen ---------- */
+const PRAISE = ['Nice!', 'Correct!', 'Spot on!', 'Exactly.', 'You got it!'];
+function renderLesson(){
+  const ex = cur();
+  const doneNow = L.done + (L.checked && L.result ? 1 : 0);
+  const pct = Math.round(doneNow / (L.done + L.queue.length) * 100);
+  const body = ({teach:exTeach, mc:exMC, tap:exTap, order:exOrder, blank:exBlank, type:exType, match:exMatch})[ex.type](ex);
+  const wrap = h('div', {class:'wrap'},
+    h('div', {class:'lbar'},
+      h('button', {class:'xbtn', type:'button', 'aria-label':'Quit lesson', html:ICON.x, onclick:() => { L.quit = true; renderLesson(); }}),
+      h('div', {class:'prog', role:'progressbar', 'aria-valuenow':pct, 'aria-valuemin':0, 'aria-valuemax':100}, h('span', {style:'width:' + pct + '%'})),
+      h('div', {class:'hearts', 'aria-label':L.hearts + ' hearts left'}, h('span', {html:ICON.heart}), String(L.hearts))),
+    h('div', {class:'combo'}, L.combo >= 3 ? L.combo + ' in a row' : ''),
+    ...body,
+    h('footer', {class:'foot', id:'foot'}));
+  const nodes = [wrap];
+  if (L.quit) nodes.push(h('div', {class:'overlay'}, h('div', {class:'sheet'},
+    h('h3', null, 'Leave this lesson?'),
+    h('p', null, 'Your progress in this lesson will be lost.'),
+    h('button', {class:'btn', type:'button', onclick:() => { L.quit = false; renderLesson(); }}, 'Keep learning'),
+    h('button', {class:'btn ghost', type:'button', onclick:renderHome}, 'Leave'))));
+  app.replaceChildren(...nodes);
+  renderFooter();
+}
+function renderFooter(){
+  const f = document.getElementById('foot'); if (!f) return;
+  const ex = cur();
+  f.className = 'foot' + (L.checked ? (L.result ? ' good' : ' bad') : '');
+  let inner;
+  if (ex.type === 'teach') {
+    inner = [h('span', {class:'fhint'}, 'Read it, then carry on.'), h('button', {class:'btn', type:'button', onclick:cont}, 'Continue')];
+  } else if (!L.checked) {
+    inner = ex.type === 'match'
+      ? [h('span', {class:'fhint'}, 'Tap a pair to match them.')]
+      : [h('span', {class:'fhint'}, ''), h('button', {class:'btn', type:'button', disabled:!answered(ex), onclick:check}, 'Check')];
+  } else if (L.result) {
+    inner = [h('div', {class:'fmsg'}, h('h3', null, ex.type === 'match' ? 'All matched!' : PRAISE[Math.floor(Math.random() * PRAISE.length)]), ex.why ? h('p', null, ex.why) : null),
+      h('button', {class:'btn', type:'button', onclick:cont}, 'Continue')];
+  } else {
+    inner = [h('div', {class:'fmsg'}, h('h3', null, 'Correct answer:'), h('p', {class:'ans'}, correctText(ex)), ex.why ? h('p', null, ex.why) : null,
+      h('p', null, 'This one will come back at the end.')),
+      h('button', {class:'btn red', type:'button', onclick:cont}, 'Got it')];
+  }
+  f.replaceChildren(h('div', {class:'fi'}, inner));
+}
+
+/* ---------- home ---------- */
+let confirmReset = false;
+function renderHome(){
+  L = null;
+  const next = ORDER.find(k => !P.done[k]);
+  const doneCount = ORDER.filter(k => P.done[k]).length;
+  const wrap = h('div', {class:'wrap'},
+    h('div', {class:'top'},
+      h('div', {class:'brand'}, 'FDE Cycle Trainer'),
+      h('div', {class:'chips'},
+        h('span', {class:'chip xp', title:'Total XP'}, h('span', {html:ICON.bolt}), P.xp + ' XP'),
+        h('span', {class:'chip', title:'Lessons done'}, h('span', {html:ICON.check, style:'color:var(--primary)'}), doneCount + '/' + ORDER.length),
+        h('button', {class:'chip snd', type:'button', onclick:() => { P.sound = !P.sound; save(); renderHome(); }}, P.sound ? 'Sound on' : 'Sound off'))),
+    h('p', {class:'sub'}, 'Cambridge IGCSE Computer Science 0478 · Paper 1 · Free, no sign-up'));
+  UNITS.forEach((u, ui) => {
+    wrap.appendChild(h('div', {class:'unit u' + ui}, h('h2', null, u.title), h('p', null, u.sub)));
+    const path = h('div', {class:'path'});
+    u.lessons.forEach(id => {
+      const gi = ORDER.indexOf(id);
+      const state = P.done[id] ? 'done' : id === next ? 'next' : 'locked';
+      path.appendChild(h('div', {class:'node ' + state, style:'--off:' + OFFS[gi % OFFS.length]},
+        state === 'next' ? h('span', {class:'bubble'}, doneCount ? 'Next' : 'Start') : null,
+        h('button', {class:'nb', type:'button', 'aria-label':LESSONS[id].name + (state === 'locked' ? ' (locked)' : ''),
+          html:state === 'locked' ? ICON.lock : state === 'done' ? ICON.check : ICON.star,
+          onclick:() => { if (state !== 'locked') startLesson(id); }}),
+        h('span', {class:'nl'}, LESSONS[id].name)));
+    });
+    wrap.appendChild(path);
+  });
+  wrap.appendChild(h('div', {class:'practice'},
+    h('div', null, h('h3', null, 'Mixed practice'), h('p', null, doneCount ? '10 random questions from the lessons you have finished.' : 'Finish a lesson to unlock practice.')),
+    h('button', {class:'btn', type:'button', disabled:!doneCount, onclick:() => startLesson('PRACTICE')}, 'Practise')));
+  wrap.appendChild(h('div', {class:'foot-links'},
+    confirmReset
+      ? [h('span', null, 'Clear all progress and XP?'),
+         h('button', {class:'linkbtn warn', type:'button', onclick:() => { P = {done:{}, xp:0, sound:P.sound}; save(); confirmReset = false; renderHome(); }}, 'Yes, reset'),
+         h('button', {class:'linkbtn', type:'button', onclick:() => { confirmReset = false; renderHome(); }}, 'Cancel')]
+      : h('button', {class:'linkbtn', type:'button', onclick:() => { confirmReset = true; renderHome(); }}, 'Reset progress')));
+  wrap.appendChild(h('p', {class:'disclaimer'}, 'Progress is saved in this browser only. Not affiliated with Cambridge International.'));
+  app.replaceChildren(wrap);
+}
+
+document.addEventListener('keydown', e => {
+  if (!L || L.quit || e.target.id === 'typein' || (e.target.tagName || '').toLowerCase() === 'button') return;
+  const ex = cur();
+  if (e.key === 'Enter') {
+    if (ex.type === 'teach' || L.checked) { e.preventDefault(); cont(); }
+    else if (answered(ex)) { e.preventDefault(); check(); }
+  } else if (ex.type === 'mc' && !L.checked && /^[1-4]$/.test(e.key) && ex._opts) {
+    L.answer = ex._opts[+e.key - 1]; renderLesson();
+  }
+});
+
+renderHome();
+</script>
+</body>
+</html>
