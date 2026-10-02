@@ -1,0 +1,29 @@
+name: Keep the account kit
+# If a rebuild of index.html drops the two lines that load kit.js (optional login,
+# progress sync and the Inkling link), this puts them back and republishes the site.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Put the kit back if it is missing
+        run: python3 .github/kit/restore.py
+      - name: Commit and republish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -s restored.txt ]; then echo "Nothing to restore"; exit 0; fi
+          rm restored.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html kit.js
+          git commit -m "Restore the account kit lines"
+          git push
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" || echo "Pages will rebuild on its next run"
