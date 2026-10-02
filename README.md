@@ -6,6 +6,7 @@ Duolingo-style revision for **Cambridge IGCSE Computer Science (0478)**, made by
 
 - 45 bite-size lessons covering the whole syllabus, Paper 1 and Paper 2
 - Exam hall with exam-style questions and mark schemes
+- 15-mark practice: write full programs for Paper 2 scenarios, marked by an AI examiner using the Cambridge levels
 - Revision notes for every topic, with space for your own
 - Lightning rounds, a mistakes review and levels from Bit to Zettabyte
 - A global XP league with usernames
