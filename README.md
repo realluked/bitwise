@@ -1,12 +1,17 @@
-# FDE Cycle Trainer
+# Bitwise
 
-Duolingo-style practice for the **fetch-decode-execute cycle** in Cambridge IGCSE Computer Science (0478), Paper 1.
+Duolingo-style revision for **Cambridge IGCSE Computer Science (0478)**, made by **realluked**.
 
-- 8 short lessons: registers, the CU/ALU/memory, fetch, decode and execute, buses, and exam traps
-- Hearts, XP and a tappable CPU diagram
-- Wrong answers come back at the end of the lesson
-- Works on phone and desktop. Progress is saved in your browser, no sign-up
+**Play it here: https://realluked.github.io/fde-cycle-trainer/**
 
-Just open `index.html`, or visit the GitHub Pages site for this repo.
+- 45 bite-size lessons covering the whole syllabus, Paper 1 and Paper 2
+- Exam hall with exam-style questions and mark schemes
+- Revision notes for every topic, with space for your own
+- Lightning rounds, a mistakes review and levels from Bit to Zettabyte
+- A global XP league with usernames
+- Free, no sign-up, works on phone and desktop
 
+---
+
+© 2026 realluked. All rights reserved. See [LICENSE](LICENSE).
 Not affiliated with Cambridge International.
