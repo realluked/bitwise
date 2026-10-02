@@ -2,13 +2,14 @@
 
 Duolingo-style revision for **Cambridge IGCSE Computer Science (0478)**, made by **realluked**.
 
-**Play it here: https://realluked.github.io/fde-cycle-trainer/**
+**Play it here: https://realluked.github.io/bitwise/**
 
 - 45 bite-size lessons covering the whole syllabus, Paper 1 and Paper 2
 - Exam hall with exam-style questions and mark schemes
 - Revision notes for every topic, with space for your own
 - Lightning rounds, a mistakes review and levels from Bit to Zettabyte
 - A global XP league with usernames
+- A feedback form to report problems and suggest ideas
 - Free, no sign-up, works on phone and desktop
 
 ---
